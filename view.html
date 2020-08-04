@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>グラフ</title>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>
+      google.charts.load('current', {'packages': ['timeline']});
+      google.charts.setOnLoadCallback(main);
+      const colors = ['red', 'green', 'yellow', 'orange', 'blue', 'purple', 'cyan'];
+      function main() {
+        let container = document.getElementById('container');
+        let chart = new google.visualization.Timeline(container);
+        let dataTable = new google.visualization.DataTable();
+
+        dataTable.addColumn({ type: 'string', id: 'Position' });
+        dataTable.addColumn({ type: 'string', id: 'Value' });
+        //dataTable.addColumn({ type: 'string', id: 'Tooltip', role: 'tooltip', 'p': {'html': true} });
+        dataTable.addColumn({ type: 'string', id: 'Style', role: 'style' });
+        dataTable.addColumn({ type: 'date', id: 'Start' });
+        dataTable.addColumn({ type: 'date', id: 'End' });
+
+        $.getJSON("./tracker-noon.json", (data) => {
+          let id = 0;
+          let rows = [];
+          data.map(packets => {
+            id += 1;
+            let length = packets.length;
+            if (length > 1) {
+              for (let i=0; i<length-1; i++) {
+                let value = `${packets[i].address}@${packets[i].payload}#${packets[i].event_type}`;
+                //let color = getRandomColor();
+                let color = colors[i%7];
+                // rows.push([`#${id}`, value, color, new Date(packets[i].datetime), new Date(packets[i+1].datetime)])
+                let s = new Date(packets[i].datetime);
+                let e = new Date(packets[i+1].datetime);
+                // e.setSeconds(e.getSeconds()+1);
+                rows.push([`#${id}`, value, `color: ${color}`, s, e]);
+              }
+              let last = length - 1;
+              let value = `${packets[last].address}@${packets[last].payload}#${packets[last].event_type}`;
+              // let color = getRandomColor();
+              let color = 'black';
+              let s = new Date(packets[last].datetime);
+              let e = new Date(packets[last].datetime);
+              e.setSeconds(e.getSeconds()+1);
+              // rows.push([`#${id}`, value, color, s, e])
+              rows.push([`#${id}`, value, `color: ${color}`, s, e]);
+            }
+          });
+          dataTable.addRows(rows);
+          let options = {
+            timeline: { groupByRowLabel: true, showBarLabels: false },
+            colors: ['red', 'green', 'yellow', 'orange', 'blue', 'purple', 'cyan', 'black'],
+          };
+          chart.draw(dataTable, options);
+        })
+      }
+
+      function getRandomColor() {
+        let hue = 360*Math.random()
+        let hsl = {
+          'h': hue,
+          's': 50,
+          'l': 100
+        }
+        let color = '#';
+        let rgb = HSLtoRGB(hsl);
+        color = color + ('0'+rgb.r.toString(16)).slice(-2) + ('0'+rgb.g.toString(16)).slice(-2) + ('0'+rgb.b.toString(16)).slice(-2);
+        return color;
+      }
+
+      function HSLtoRGB(hsl) {
+        let color = '#';
+        let rgb = {};
+        let h = Math.round(hsl.h);
+        let s = Math.round(hsl.s * 255 / 100);
+        let l = Math.round(hsl.l * 255 / 100);
+        if (s == 0) {
+          rgb.r = rgb.g = rgb.b = v;
+        } else {
+          let x = l;
+          let y = (255 - s) * l / 255;
+          let z = (x - y) * (h % 60) / 60;
+          if (h == 360) h = 0;
+          if (h < 60) {rgb.r = x; rgb.g = y+z; rgb.b = y}
+          else if (h < 120) { rgb.r = x-z; rgb.g = x;   rgb.b = y;   }
+          else if (h < 180) { rgb.r = y;   rgb.g = x;   rgb.b = y+z; }
+          else if (h < 240) { rgb.r = y;   rgb.g = x-z; rgb.b = x;   }
+          else if (h < 300) { rgb.r = y+z; rgb.g = y;   rgb.b = x;   }
+          else if (h < 360) { rgb.r = x;   rgb.g = y;   rgb.b = x-z; }
+          else { rgb.r = 0; rgb.g = 0; rgb.b = 0; }
+        }
+        return rgb;
+      }
+    </script>
+  </head>
+  <body>
+    <div id="container" style="height: 700px;"></div>
+  </body>
+</html>
